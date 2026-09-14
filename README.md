@@ -1,37 +1,38 @@
-# 🌤️ Pipeline ETL — Dados Climáticos de São Paulo
+# 🌤️ Pipeline ETL - Dados Climáticos
 
-Pipeline de **Engenharia de Dados** para coleta, transformação e armazenamento de dados meteorológicos da cidade de São Paulo.
+Pipeline de Engenharia de Dados desenvolvido como projeto de estudo para coleta,
+transformação e armazenamento de dados meteorológicos.
 
-> 📚 **Projeto de estudo baseado nos ensinamentos da [VBLUUIZA](https://www.youtube.com/@vbluuiza).**
->
-> A implementação inicial foi desenvolvida acompanhando o tutorial e será evoluída posteriormente com novos conceitos e tecnologias de Engenharia de Dados.
+O projeto segue inicialmente os ensinamentos da **VBLUUIZA**, utilizando seu
+tutorial como base para a implementação inicial. A partir dessa primeira versão,
+o projeto será evoluído com novas práticas e tecnologias de Engenharia de Dados.
 
----
+## 🏗️ Arquitetura
+
+Fluxo principal do pipeline:
+
+![Arquitetura do Pipeline](images/pipeline_architecture.png)
+
+**Fluxo:** OpenWeatherMap → Extract → Transform → Load → PostgreSQL
+
+A execução e orquestração do pipeline são realizadas pelo **Apache Airflow**,
+com o ambiente executado em **Docker**.
+
+## 🛠️ Tecnologias
+
+- Python
+- Apache Airflow
+- PostgreSQL
+- Docker
+- Pandas
+- Parquet
+- OpenWeatherMap API
 
 ## 🎯 Objetivo
 
 Praticar conceitos fundamentais de Engenharia de Dados através da construção de um pipeline ETL automatizado, utilizando uma API REST como fonte de dados.
 
-```text
-OpenWeatherMap API
-        │
-        ▼
-     Extract
-        │
-        ▼
-     JSON
-        │
-        ▼
-    Transform
-        │
-        ▼
-    Parquet
-        │
-        ▼
-      Load
-        │
-        ▼
-   PostgreSQL
+
 ```
 
 A execução e o agendamento do pipeline são gerenciados pelo **Apache Airflow**.
@@ -52,7 +53,6 @@ A execução e o agendamento do pipeline são gerenciados pelo **Apache Airflow*
 * **UV**
 
 ---
-
 ## 📂 Estrutura
 
 ```text
