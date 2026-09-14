@@ -100,7 +100,7 @@ Os dados transformados são carregados na tabela `sp_weather` do **PostgreSQL**.
 
 ## ⚙️ Airflow
 
-A DAG `youtube_weather_pipeline` executa:
+A DAG `weather_pipeline` executa:
 
 ```text
 extract()
@@ -151,7 +151,7 @@ http://localhost:8080
 Execute a DAG:
 
 ```text
-youtube_weather_pipeline
+weather_pipeline
 ```
 
 ---
