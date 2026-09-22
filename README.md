@@ -197,7 +197,7 @@ Projeto desenvolvido como estudo a partir do conteúdo da **VBLUUIZA**.
 
 Engenheiro de Controle e Automação em transição para **Engenharia de Dados**.
 
-* [LinkedIn](https://www.linkedin.com/in/pedro-prado-34369a1b5)
+* [LinkedIn](www.linkedin.com/in/pedro-hsprado-dataengineer)
 * [GitHub](https://github.com/Dev-PPrado)
 
 ---
