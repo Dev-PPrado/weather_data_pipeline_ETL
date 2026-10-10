@@ -23,9 +23,9 @@ A DAG fica em [`dags/weather_dag.py`](dags/weather_dag.py) e as etapas em [`src/
 
 | Etapa | Código | O que faz |
 |---|---|---|
-| **Extract** | [`src/extract_data.py`](src/extract_data.py) | Chama a API do OpenWeatherMap e salva a resposta em `data/weather_data.json`. |
+| **Extract** | [`src/extract_data.py`](src/extract_data.py) | Chama a API do OpenWeatherMap e salva a resposta em `data/weather_data.json`. Se a API falhar, a tarefa falha e o Airflow tenta de novo. |
 | **Transform** | [`src/transform_data.py`](src/transform_data.py) | Achata o JSON com `json_normalize`, abre a lista `weather` em colunas próprias, remove colunas sem uso, renomeia (`main.temp` → `temperature`, `dt` → `datetime`...) e converte `datetime`, `sunrise` e `sunset` de Unix para o fuso `America/Sao_Paulo`. O resultado vai para `data/temp_data.parquet`. |
-| **Load** | [`src/load_data.py`](src/load_data.py) | Lê o Parquet e faz `to_sql` em modo `append` na tabela `sp_weather`. Depois conta as linhas da tabela e registra no log. |
+| **Load** | [`src/load_data.py`](src/load_data.py) | Lê o Parquet e faz `to_sql` em modo `append` na tabela `sp_weather`. Depois registra no log o total de linhas da tabela (`COUNT(*)`). |
 
 ### A DAG
 
@@ -36,6 +36,8 @@ A DAG fica em [`dags/weather_dag.py`](dags/weather_dag.py) e as etapas em [`src/
 | Tarefas | `extract >> transform >> load` |
 | Retries | 1, com 5 minutos de espera |
 | `catchup` | `False` (não roda execuções passadas) |
+
+Para rodar as etapas fora do Airflow (por exemplo, para depurar), `uv sync` instala as dependências locais.
 
 ### Tabela `sp_weather` (algumas colunas)
 
@@ -54,6 +56,7 @@ A tabela é criada pelo próprio Pandas na primeira carga, então os tipos são 
 - **Uma tarefa por etapa:** extract, transform e load são tarefas separadas no Airflow, então dá para ver e reexecutar cada uma pela interface.
 - **Arquivos intermediários:** as tarefas trocam dados por arquivo (JSON bruto e Parquet) em `data/`, uma pasta compartilhada entre os containers. O Parquet mantém os tipos (inclusive o fuso das datas) entre o transform e o load.
 - **Histórico em append:** cada execução adiciona uma linha nova em `sp_weather`, formando uma série temporal do clima.
+- **Falha explícita no extract:** um erro da API (chave inválida, limite, timeout de 30 s) derruba a tarefa em vez de seguir com o JSON da execução anterior. Assim o retry do Airflow entra em ação e o transform nunca reprocessa dado velho como se fosse novo.
 - **Credenciais fora do código:** chave da API e acesso ao banco ficam em `config/.env`, que não é versionado.
 - **Logs:** cada etapa usa `logging`, visível nos logs das tarefas no Airflow.
 
@@ -70,14 +73,17 @@ A tabela é criada pelo próprio Pandas na primeira carga, então os tipos são 
 
 Pré-requisitos: Docker com Docker Compose e uma [chave de API do OpenWeatherMap](https://home.openweathermap.org/api_keys).
 
-1. Crie `config/.env` com a chave da API e o acesso ao PostgreSQL onde os dados serão gravados:
+1. Crie `config/.env` com a chave da API e o acesso ao PostgreSQL onde os dados serão gravados. O jeito mais simples é usar o PostgreSQL do próprio compose:
 
    ```env
    API_KEY=sua_chave_aqui
-   user=postgres
-   password=sua_senha
-   data_base=nome_do_banco
+   user=airflow
+   password=airflow
+   data_base=airflow
+   host=postgres
    ```
+
+   Para gravar num PostgreSQL da sua máquina, troque o usuário, a senha e o banco e remova `host` (o padrão é `host.docker.internal`). A porta pode ser alterada com `port` (padrão `5432`).
 
 2. Crie um `.env` na raiz (o `docker-compose.yaml` exige esse arquivo):
 
@@ -93,8 +99,6 @@ Pré-requisitos: Docker com Docker Compose e uma [chave de API do OpenWeatherMap
    ```
 
 4. Acesse o Airflow em http://localhost:8080 (usuário e senha `airflow`), ative a DAG `weather_pipeline` (ela começa pausada) e dispare uma execução.
-
-O load conecta em `host.docker.internal:5432`, ou seja, num PostgreSQL rodando na sua máquina. O PostgreSQL do `docker-compose.yaml` é o banco de metadados do Airflow e não expõe porta para fora.
 
 Para explorar o JSON extraído, há um notebook em [`notebooks/analysis_data.ipynb`](notebooks/analysis_data.ipynb).
 
@@ -121,15 +125,14 @@ As pastas `config/`, `data/`, `logs/` e `plugins/` são montadas nos containers 
 ## Limitações conhecidas
 
 - **Cidade fixa:** a URL da API está na DAG com São Paulo.
-- **Sem validação:** o extract não trata falhas de rede, e uma resposta fora do esperado só quebra no transform.
-- **Leitura da tabela inteira no load:** a contagem de linhas faz `SELECT *` em `sp_weather`, o que fica mais lento conforme a tabela cresce.
+- **Sem validação de schema:** uma resposta da API com formato diferente do esperado só quebra no transform.
+- **Banco compartilhado:** usando `host=postgres`, a tabela `sp_weather` fica no mesmo banco de metadados do Airflow. Serve para estudo; em produção o destino seria um banco separado.
 - **Sem testes automatizados.**
 
 ## Próximos passos
 
 - [ ] Validação e qualidade dos dados
 - [ ] Testes automatizados
-- [ ] Tratamento de erros e retries no extract
 - [ ] Carga incremental
 - [ ] Arquitetura medallion (bronze, silver, gold)
 - [ ] Processamento com PySpark

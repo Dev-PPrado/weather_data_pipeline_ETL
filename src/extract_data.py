@@ -6,16 +6,17 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def extract_weather_data(url: str) -> list:
-    response = requests.get(url)
-    data = response.json()
+    response = requests.get(url, timeout=30)
 
     if response.status_code != 200:
-        logging.error("Erro na requisição")
-        return []
+        # Falha a tarefa para o Airflow tentar de novo, em vez de seguir com o JSON da execução anterior
+        logging.error(f"Erro na requisição: status {response.status_code}")
+        response.raise_for_status()
+
+    data = response.json()
 
     if not data:
-        logging.warning("Nenhum dado encontrado")
-        return []
+        raise ValueError("A API não retornou dados")
 
 
     output_path = 'data/weather_data.json'
